@@ -1,0 +1,261 @@
+class CoordsCalc
+{
+  CoordsCalc()
+  {
+  }
+
+  void update()
+  {
+    int currX = vidW;
+    int currW = 0;
+    boolean isYAssigned = false;
+    boolean isWAssigned = false;
+    for (int j = 0; j < coloursAssigned; j++) 
+    {
+      currX = vidW;
+      currW = 0;
+      isYAssigned = false;
+      isWAssigned = false;
+
+
+
+
+      if (j%2!=0)
+      {
+        for (int i = 0; i < numPixels/2; i++)              //scan every pixels
+        {
+          colouredPixels[abs(i / vidW)][i % vidW] = 0;
+          color currColor = video.pixels[i];
+          currR = (currColor >> 16) & 0xFF;
+          currG = (currColor >> 8) & 0xFF;
+          currB = currColor & 0xFF;
+          if (isColourWithinRange(j))
+          {
+            noStroke();
+            if (isShowPixels) 
+            {
+              fill(255);
+              rect((i % vidW), (abs(i / vidW)), 1, 1);
+              //rect((i % vidW) * rectDivide, (abs(i / vidW)) * rectDivide, 1 * rectDivide, 1 * rectDivide);
+            }
+            if ((i % vidW) < currX)
+            {
+              currX = i % vidW;
+              squareCoords[j][0] = currX;
+            } 
+            if (!isYAssigned)
+            {
+              isYAssigned = true;
+              squareCoords[j][1] = abs(i / vidW);
+            }
+            squareCoords[j][3] = (abs(i / vidW)) - squareCoords[j][1] + 1;
+            if ((i % vidW) > currW)
+            {
+              currW = i % vidW;
+              isWAssigned = true;
+            }
+          }
+          if (i == numPixels/2 - 1 && isWAssigned)
+          {
+            squareCoords[j][2] = currW - squareCoords[j][0] + 1;
+          }
+        }
+      }
+      else
+      {
+
+
+        for (int i = numPixels/2; i < numPixels; i++)              //scan every pixels
+        {
+          colouredPixels[abs(i / vidW)][i % vidW] = 0;
+          color currColor = video.pixels[i];
+          currR = (currColor >> 16) & 0xFF;
+          currG = (currColor >> 8) & 0xFF;
+          currB = currColor & 0xFF;
+
+
+
+
+          if (isColourWithinRange(j))
+          {
+
+            noStroke();
+            if (isShowPixels) 
+            {
+              fill(255);
+              rect((i % vidW), (abs(i / vidW)), 1, 1);
+              //rect((i % vidW) * rectDivide, (abs(i / vidW)) * rectDivide, 1 * rectDivide, 1 * rectDivide);
+            }
+            if ((i % vidW) < currX)
+            {
+              currX = i % vidW;
+              squareCoords[j][0] = currX;
+            } 
+            if (!isYAssigned)
+            {
+              isYAssigned = true;
+              squareCoords[j][1] = abs(i / vidW);
+            }
+            squareCoords[j][3] = (abs(i / vidW)) - squareCoords[j][1] + 1;
+            if ((i % vidW) > currW)
+            {
+              currW = i % vidW;
+              isWAssigned = true;
+            }
+          }
+          if (i == numPixels - 1 && isWAssigned)
+          {
+            squareCoords[j][2] = currW - squareCoords[j][0] + 1;
+          }
+        }
+      }                      // down part end
+
+
+
+      //draw ellipse
+    }
+    drawEllipse();
+
+    drawLine();
+    if (isAwesomeOn)
+    {
+      drawAwesome();
+    }
+    if (isDrawOn)
+    {
+
+      drawConnection();
+    }
+  }
+
+
+
+
+
+  void drawEllipse()
+  {
+
+    for (int i = 0; i < coloursAssigned; i++)
+    {
+      int which =frameCount % num;
+      centrePoints[i][0] = (squareCoords[i][0] * rectDivide) + ((squareCoords[i][2] * rectDivide) / 2);
+      centrePoints[i][1] = (squareCoords[i][1] * rectDivide) + ((squareCoords[i][3] * rectDivide) / 2);
+
+      float dx = centrePoints[i][0] - EllipseX[i];
+      if (abs(dx) > 1)
+      {
+        EllipseX[i] += dx * easing;
+      }
+
+      float dy = centrePoints[i][1] - EllipseY[i];
+      if (abs(dy) > 1)
+      {
+        EllipseY[i] += dy * easing;
+      }
+
+
+      mx[which][i] = EllipseX[i];
+      my[which][i] = EllipseY[i];
+
+      for (int j =0; j<num; j++)
+      {
+        int index = (which+1 + j)%num;
+        fill(255, 255, 255, 40);
+        noStroke();
+        ellipse(mx[index][i], my[index][i], j/2, j/2);
+      }
+    }
+  }
+
+  void drawLine()
+  {
+    stroke(255, 50);
+    strokeWeight(1);
+    for ( int i=0;i<coloursAssigned;i++)
+    {
+      line(EllipseX[i], EllipseY[i], width/2, height/2);
+    }
+    if ( coloursAssigned==1)
+    {
+      line(EllipseX[0], EllipseY[0], 0, height);
+    }
+    if (coloursAssigned==2)
+    {
+      line(EllipseX[0], EllipseY[0], 0, height);
+      line(EllipseX[1], EllipseY[1], 0, 0);
+    }
+    if (coloursAssigned==3)
+    {
+      line(EllipseX[0], EllipseY[0], 0, height);
+      line(EllipseX[1], EllipseY[1], 0, 0);
+
+      line(EllipseX[2], EllipseY[2], width/2, height);
+    }
+    if (coloursAssigned==4)
+    {
+      line(EllipseX[0], EllipseY[0], 0, height);
+      line(EllipseX[1], EllipseY[1], 0, 0);
+
+      line(EllipseX[2], EllipseY[2], width/2, height);
+
+      line(EllipseX[3], EllipseY[3], width/2, 0);
+    }
+    if (coloursAssigned==5)
+    {
+      line(EllipseX[0], EllipseY[0], 0, height);
+      line(EllipseX[1], EllipseY[1], 0, 0);
+
+      line(EllipseX[2], EllipseY[2], width/2, height);
+
+      line(EllipseX[3], EllipseY[3], width/2, 0);
+
+      line(EllipseX[4], EllipseY[4], width, height);
+    }
+    if (coloursAssigned>=6)
+    {
+      line(EllipseX[0], EllipseY[0], 0, height);
+      line(EllipseX[1], EllipseY[1], 0, 0);
+
+      line(EllipseX[2], EllipseY[2], width/2, height);
+
+      line(EllipseX[3], EllipseY[3], width/2, 0);
+
+      line(EllipseX[4], EllipseY[4], width, height);
+      line(EllipseX[5], EllipseY[5], width, 0);
+    }
+  }
+
+
+
+  void drawConnection()
+  {
+    for ( int i=1;i<coloursAssigned;i++)
+    {
+      for (int j=0;j<coloursAssigned;j++)
+      {
+        strokeWeight(1);
+        fill(255);
+        line (EllipseX[i], EllipseY[i], EllipseX[j], EllipseY[j]);
+      }
+    }
+  }
+
+  //color detection function
+
+  boolean isColourWithinRange(int j)  
+  {
+    if (currR > (colourCompareData[j][0] + colourRange) || currR < (colourCompareData[j][0] - colourRange))
+    {
+      return false;
+    }
+    if (currG > (colourCompareData[j][1] + colourRange) || currG < (colourCompareData[j][1] - colourRange))
+    {
+      return false;
+    }
+    if (currB > (colourCompareData[j][2] + colourRange) || currB < (colourCompareData[j][2] - colourRange))
+    {
+      return false;
+    }
+    return true;
+  }
+}
