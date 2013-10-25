@@ -1,0 +1,504 @@
+import processing.video.*;
+Capture video;
+
+float[] EllipseX =new float [50];
+float[] EllipseY =new float [50];
+float easing = 0.1;
+
+int num=20;
+float mx[][] = new float[num][50];
+float my[][] = new float[num][50];
+
+
+
+ArrayList<MovingNode> nodes;
+float maxDistance = 80;
+float dx = 10;
+float dy = 10;
+float maxNeighbors = 15;
+
+Boolean drawMode = true;
+
+
+
+int numPixels;                      // number of pixels in the video
+int rectDivide = 1;                 // the stage width/height divided by this number is the video width/height 
+int vidW;                           // video width
+int vidH;                           // video height
+int[][] colouredPixels;             // the different colour references for each pixel
+int[][] colourCompareData;          // captured r, g and b colours
+int currR;                          //
+int currG;                          //
+int currB;                          //
+int[][] squareCoords;               // x, y, w + h of the coloured areas
+color[] colours;                    // captured colours
+int colourRange = 8;               // colour threshold
+int[][] centrePoints;               // centres of the coloured squares
+color[] pixelColours;
+boolean isShowPixels = false;   // determines whether the square and coloured pixels are displayed
+boolean isShowVideo = true;
+boolean isDrawOn=false;
+boolean isAwesomeOn=false;
+
+int colourMax = 11;                  // max amount of colours - also adjust the amount of colours added to pixelColours in setup()
+int coloursAssigned = 0;            // amount of cours currently assigned
+CoordsCalc coordsCalc;
+
+void setup() 
+{
+  size(640, 480);
+  vidW = width / rectDivide;
+  vidH = height / rectDivide;
+  video = new Capture(this, vidW, vidH, 30);
+  noStroke();
+  numPixels = vidW * vidH;
+  colouredPixels = new int[vidH][vidW];
+  colourCompareData = new int[colourMax][3];
+  squareCoords = new int[colourMax][4];
+  colours = new color[colourMax];
+  centrePoints = new int[colourMax][2];
+  color c1 = color(0, 255, 0);
+  color c2 = color(255, 0, 0);
+  pixelColours = new color[colourMax];
+  pixelColours[0] = color(0, 255, 0);
+  pixelColours[1] = color(255, 0, 0);
+  coordsCalc = new CoordsCalc();
+
+
+  nodes = new ArrayList<MovingNode>();
+
+
+
+  video.start();
+  smooth();
+}
+
+void captureEvent(Capture video) 
+{
+  video.read();
+}
+
+
+
+
+
+
+
+
+void draw() 
+{
+
+
+  noStroke();
+  fill(90);
+  rect(0, 0, width, height);
+  if (isShowVideo)
+  {
+    drawVideo();
+  }
+  coordsCalc.update();
+  for (int i = 0; i < coloursAssigned; i++)
+  {
+    if (isShowPixels) drawSquare(i);
+  }
+  strokeWeight(1);
+  stroke(255, 70);
+  line(0, 240, 640, 240);
+}
+
+
+
+
+
+
+
+
+void drawVideo()
+{
+
+  for (int i = 0; i < coloursAssigned; i++)
+  {
+    fill(colours[i]);
+    rect(i * 10, vidH, 10, 10);
+  }
+  image(video, 0, 0);
+  noFill();
+  stroke(255, 0, 0);
+  strokeWeight(2);
+  rect(vidW - 4, vidH - 4, 4, 4);
+}
+
+
+
+
+
+
+
+
+
+void drawSquare(int i)
+{
+  int sqX = squareCoords[i][0];
+  int sqY = squareCoords[i][1];
+  int sqW = squareCoords[i][2];
+  int sqH = squareCoords[i][3];
+  noFill();
+  stroke(0, 0, 255);
+  strokeWeight(3);
+  rect(sqX, sqY, sqW, sqH);
+
+
+  stroke(0, 0, 255);
+  strokeWeight(4);
+  rect(sqX * rectDivide, sqY * rectDivide, sqW * rectDivide, sqH * rectDivide);
+  line(sqX * rectDivide, sqY * rectDivide, ((sqX * rectDivide) + (sqW * rectDivide)), ((sqY * rectDivide) + (sqH * rectDivide)));
+  line(((sqX * rectDivide) + (sqW * rectDivide)), sqY * rectDivide, sqX * rectDivide, (sqY * rectDivide + sqH * rectDivide));
+}
+
+
+
+
+
+
+//pick color
+void keyPressed() 
+{
+  println("key pressed = " + key);
+  int loc = mouseX + mouseY*video.width;
+  color currPixColor = video.pixels[loc];
+  // color currPixColor = video.pixels[numPixels - (vidW * 2) - 3];
+  int pixR = (currPixColor >> 16) & 0xFF;
+  int pixG = (currPixColor >> 8) & 0xFF;
+  int pixB = currPixColor & 0xFF;
+  if (key == 'p') 
+  {
+    isShowPixels = !isShowPixels;
+  }
+  if (key=='s')
+  {
+    isShowVideo = !isShowVideo;
+  }
+  if (key == '1') 
+  {
+    coloursAssigned = 1;
+    colourCompareData[0][0] = pixR;
+    colourCompareData[0][1] = pixG;
+    colourCompareData[0][2] = pixB;
+    colours[0] = color(pixR, pixG, pixB);
+  }
+  if (colourMax < 2 || coloursAssigned < 1) return;
+  if (key == '2') 
+  {
+    coloursAssigned = 2;
+    colourCompareData[1][0] = pixR;
+    colourCompareData[1][1] = pixG;
+    colourCompareData[1][2] = pixB;
+    colours[1] = color(pixR, pixG, pixB);
+  }
+  if (key == '3') 
+  {
+    coloursAssigned = 3;
+    colourCompareData[2][0] = pixR;
+    colourCompareData[2][1] = pixG;
+    colourCompareData[2][2] = pixB;
+    colours[2] = color(pixR, pixG, pixB);
+  }
+  if (key == '4') 
+  {
+    coloursAssigned =4;
+    colourCompareData[3][0] = pixR;
+    colourCompareData[3][1] = pixG;
+    colourCompareData[3][2] = pixB;
+    colours[3] = color(pixR, pixG, pixB);
+  }
+  if (key == '5') 
+  {
+    coloursAssigned =5;
+    colourCompareData[4][0] = pixR;
+    colourCompareData[4][1] = pixG;
+    colourCompareData[4][2] = pixB;
+    colours[4] = color(pixR, pixG, pixB);
+  }
+  if (key == '6') 
+  {
+    coloursAssigned =6;
+    colourCompareData[5][0] = pixR;
+    colourCompareData[5][1] = pixG;
+    colourCompareData[5][2] = pixB;
+    colours[5] = color(pixR, pixG, pixB);
+  }
+  if (key == '7') 
+  {
+    coloursAssigned =7;
+    colourCompareData[6][0] = pixR;
+    colourCompareData[6][1] = pixG;
+    colourCompareData[6][2] = pixB;
+    colours[6] = color(pixR, pixG, pixB);
+  }
+  if (key == '8') 
+  {
+    coloursAssigned =8;
+    colourCompareData[7][0] = pixR;
+    colourCompareData[7][1] = pixG;
+    colourCompareData[7][2] = pixB;
+    colours[7] = color(pixR, pixG, pixB);
+  }
+  if (key == '9') 
+  {
+    coloursAssigned =9;
+    colourCompareData[8][0] = pixR;
+    colourCompareData[8][1] = pixG;
+    colourCompareData[8][2] = pixB;
+    colours[8] = color(pixR, pixG, pixB);
+  }
+  if (key == '-') 
+  {
+    coloursAssigned =10;
+    colourCompareData[9][0] = pixR;
+    colourCompareData[9][1] = pixG;
+    colourCompareData[9][2] = pixB;
+    colours[9] = color(pixR, pixG, pixB);
+  }
+  if (key == '=') 
+  {
+    coloursAssigned =11;
+    colourCompareData[10][0] = pixR;
+    colourCompareData[10][1] = pixG;
+    colourCompareData[10][2] = pixB;
+    colours[10] = color(pixR, pixG, pixB);
+  }
+  if (key=='b')
+  {
+    isDrawOn=!isDrawOn;
+  }
+  if (key=='v')
+  {
+    isAwesomeOn=!isAwesomeOn;
+  }
+  if (key == '0') 
+  {
+    coloursAssigned = 0;
+  }
+}
+
+
+
+/////////////////////
+
+
+void drawAwesome()
+{
+  if (drawMode)
+  {
+    for (int m=0;m<coloursAssigned;m++)
+    {
+      addNewNode(EllipseX[m], EllipseY[m], random(-dx, dx), random(-dx, dx));
+    }
+  } 
+  else
+  {
+    addNewNode(random(width), random(height), 0, 0);
+  }
+
+  for (int i=0; i<nodes.size(); i++)
+  {
+    MovingNode currentNode = nodes.get(i);
+    currentNode.setNumNeighbors( countNumNeighbors(currentNode, maxDistance) );
+    if (currentNode.x > width || currentNode.x < 0 || currentNode.y > height || currentNode.y < 0 )
+    {
+      nodes.remove(currentNode);
+    }
+  }
+
+  for (int i = 0; i < nodes.size(); i++) {
+    MovingNode currentNode = nodes.get(i);
+    for (int j=0; j<currentNode.neighbors.size(); j++)
+    {
+      MovingNode neighborNode = currentNode.neighbors.get(j);
+      float lineColor = currentNode.calculateLineColor(neighborNode, maxDistance);
+      stroke(255, 255, 255, 10);
+      line(currentNode.x, currentNode.y, neighborNode.x, neighborNode.y);
+    }
+    currentNode.display();
+  }
+}
+
+void addNewNode(float xPos, float yPos, float dx, float dy)
+{
+
+  MovingNode node = new MovingNode(xPos+dx, yPos+dy);
+
+  node.setNumNeighbors( countNumNeighbors(node, maxDistance) );
+
+
+
+
+  if (node.numNeighbors < maxNeighbors) {
+    nodes.add(node);
+  }
+}
+
+int countNumNeighbors(MovingNode nodeA, float maxNeighborDistance)
+{
+  int numNeighbors = 0;
+  nodeA.clearNeighbors();
+
+  for (int i = 0; i < nodes.size(); i++)
+  {
+    MovingNode nodeB = nodes.get(i);
+    float distance = sqrt((nodeA.x-nodeB.x)*(nodeA.x-nodeB.x) + (nodeA.y-nodeB.y)*(nodeA.y-nodeB.y));
+    if (distance < maxNeighborDistance)
+    {
+      numNeighbors++;
+      nodeA.addNeighbor(nodeB);
+    }
+  }
+  return numNeighbors;
+}
+
+class MovingNode
+{
+  float x;
+  float y;
+  int numNeighbors;
+  ArrayList<MovingNode> neighbors;
+  float lineColor;
+  float nodeWidth = 3;
+  float nodeHeight = 3;
+  float fillColor = 50;
+  float lineColorRange = 180;
+
+  float xVel=0;
+  float yVel=0;
+  float xAccel=0;
+  float yAccel=0;
+
+  float accelValue = 0.5;
+
+  float startX;
+  float startY;
+  float kGravity = 0.01;
+
+  MovingNode(float xPos, float yPos)
+  {
+    startX = xPos;
+    startY = yPos;
+
+    x = xPos;
+    y = yPos;
+    numNeighbors = 0;
+    neighbors = new ArrayList<MovingNode>();
+  }
+
+  void display()
+  {
+    move();
+
+    noStroke();
+    fill(255, 30);
+    ellipse(x, y, nodeWidth, nodeHeight);
+  }
+
+  void move()
+  {   
+    //xAccel = (startX - x) * kGravity + random(-accelValue,accelValue);
+    //yAccel = (startY - y) * kGravity + random(-accelValue,accelValue);
+
+    xAccel = random(-accelValue, accelValue);
+    if (xAccel != 0) {
+      xAccel *= 1/(1 + abs(startX - x));
+      if ((startX-x < 0 && xAccel > 0) || (startX-x > 0 && xAccel < 0))
+      {
+        xAccel *= -1;
+      }
+    }
+
+    yAccel = random(-accelValue, accelValue);
+    if (yAccel != 0) {
+      yAccel *= 1/(1 + abs(startY - y));
+      if ((startY-y < 0 && yAccel > 0) || (startY-y > 0 && yAccel < 0))
+      {
+        yAccel *= -1;
+      }
+    }
+
+    println(str(xAccel) + str(yAccel));
+
+    xVel += xAccel;
+    yVel += yAccel;
+
+    x += xVel;
+    y += yVel;
+  }
+
+  void addNeighbor(MovingNode node)
+  {
+    neighbors.add(node);
+  }
+
+  void setNumNeighbors(int num)
+  {
+    numNeighbors = num;
+  }
+
+  void clearNeighbors()
+  {
+    neighbors = new ArrayList<MovingNode>();
+  }
+
+  float calculateLineColor(MovingNode neighborNode, float maxDistance)
+  {
+    float distance = sqrt((x-neighborNode.x)*(x-neighborNode.x) + (y-neighborNode.y)*(y-neighborNode.y));
+    lineColor = (distance/maxDistance)*lineColorRange;
+    return lineColor;
+  }
+}
+class Node
+{
+  float x;
+  float y;
+  int numNeighbors;
+  ArrayList<Node> neighbors;
+  float lineColor;
+  float nodeWidth = 3;
+  float nodeHeight = 3;
+  float fillColor = 50;
+  float lineColorRange = 160;
+
+  Node(float xPos, float yPos)
+  {
+    x = xPos;
+    y = yPos;
+    numNeighbors = 0;
+    neighbors = new ArrayList<Node>();
+  }
+
+  void display()
+  {
+    noStroke();
+    fill(255, 10);
+    ellipse(x, y, nodeWidth, nodeHeight);
+  }
+
+  void addNeighbor(Node node)
+  {
+    neighbors.add(node);
+  }
+
+  void setNumNeighbors(int num)
+  {
+    numNeighbors = num;
+  }
+
+  void clearNeighbors()
+  {
+    neighbors = new ArrayList<Node>();
+  }
+
+  float calculateLineColor(Node neighborNode, float maxDistance)
+  {
+    float distance = sqrt((x-neighborNode.x)*(x-neighborNode.x) + (y-neighborNode.y)*(y-neighborNode.y));
+    lineColor = (distance/maxDistance)*lineColorRange;
+    return lineColor;
+  }
+}
